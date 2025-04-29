@@ -1,5 +1,6 @@
 from transformers import AutoTokenizer, AutoModelForCausalLM
 import torch, time
+import yaml
 
 model_id = "facebook/opt-1.3b"
 tokenizer = AutoTokenizer.from_pretrained(model_id)
@@ -15,7 +16,12 @@ generated_tokens = outputs.shape[-1]
 time_taken = end - start
 tokens_per_sec = generated_tokens / time_taken
 
-print(f"LLM Benchmark Results:")
-print(f"Generated Tokens: {generated_tokens}")
-print(f"Time Taken (s): {time_taken:.4f}")
-print(f"Tokens per Second: {tokens_per_sec:.2f}")
+result = {
+    "LLM": {
+        "Generated_Tokens": int(generated_tokens),
+        "Time_Taken_Sec": round(time_taken, 4),
+        "Tokens_per_Sec": round(tokens_per_sec, 2)
+    }
+}
+
+print(yaml.dump(result))
