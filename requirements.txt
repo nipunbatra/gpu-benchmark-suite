@@ -1,3 +1,6 @@
-torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu122
-transformers accelerate
+torch --index-url https://download.pytorch.org/whl/cu122
+torchvision --index-url https://download.pytorch.org/whl/cu122
+torchaudio --index-url https://download.pytorch.org/whl/cu122
+transformers
+accelerate
 ultralytics
