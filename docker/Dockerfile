@@ -4,4 +4,4 @@ RUN apt update && apt install -y git wget unzip libgl1 libglib2.0-0
 
 COPY requirements.txt .
 RUN pip install uv
-RUN uv pip install -r requirements.txt
+RUN pip install --no-cache-dir -r requirements.txt
