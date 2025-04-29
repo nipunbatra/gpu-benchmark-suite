@@ -3,19 +3,26 @@ import time
 from utils import update_results
 
 model = YOLO("yolov8n.pt")
-images = ["https://ultralytics.com/images/bus.jpg"] * 10
+img = "https://ultralytics.com/images/bus.jpg"
 
+# Warm-up
+_ = model(img)
+
+# First run
 start = time.time()
-for img in images:
-    results = model(img)
-end = time.time()
+_ = model(img)
+first_time = time.time() - start
 
-num_images = len(images)
-total_time = end - start
-fps = num_images / total_time
+# Steady state
+start = time.time()
+for _ in range(100):
+    _ = model(img)
+steady_time = time.time() - start
+fps = 100 / steady_time
 
 update_results("Detection", {
-    "Images_Processed": num_images,
-    "Total_Time_Sec": round(total_time, 4),
-    "FPS": round(fps, 2)
+    "Images_Processed": 100,
+    "First_Run_Sec": round(first_time, 4),
+    "Steady_Total_Sec": round(steady_time, 4),
+    "Steady_FPS": round(fps, 2)
 })
