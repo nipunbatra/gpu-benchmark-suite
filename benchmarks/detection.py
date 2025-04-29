@@ -1,6 +1,6 @@
 from ultralytics import YOLO
 import time
-import yaml
+from utils import update_results
 
 model = YOLO("yolov8n.pt")
 images = ["https://ultralytics.com/images/bus.jpg"] * 10
@@ -14,12 +14,8 @@ num_images = len(images)
 total_time = end - start
 fps = num_images / total_time
 
-result = {
-    "Detection": {
-        "Images_Processed": num_images,
-        "Total_Time_Sec": round(total_time, 4),
-        "FPS": round(fps, 2)
-    }
-}
-
-print(yaml.dump(result))
+update_results("Detection", {
+    "Images_Processed": num_images,
+    "Total_Time_Sec": round(total_time, 4),
+    "FPS": round(fps, 2)
+})
