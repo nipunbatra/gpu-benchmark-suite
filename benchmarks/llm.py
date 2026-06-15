@@ -4,7 +4,10 @@ from utils import update_results
 
 model_id = "facebook/opt-1.3b"
 tokenizer = AutoTokenizer.from_pretrained(model_id)
-model = AutoModelForCausalLM.from_pretrained(model_id, torch_dtype=torch.float16, device_map="auto")
+# attn_implementation="eager" avoids the container's flash-attn build (ABI issues on import)
+model = AutoModelForCausalLM.from_pretrained(
+    model_id, torch_dtype=torch.float16, device_map="auto", attn_implementation="eager"
+)
 
 prompt = "Tell me about climate change. " * 10
 inputs = tokenizer(prompt, return_tensors="pt").to("cuda")
