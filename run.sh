@@ -27,6 +27,7 @@ mkdir -p results "$DATA_DIR"
 
 COMMON=(
   --rm --gpus all
+  --shm-size=8g
   -e BENCH_HOST="$HOST"
   -e BENCH_TIMESTAMP="$TS"
   -e BENCH_DATA_DIR=/scratch

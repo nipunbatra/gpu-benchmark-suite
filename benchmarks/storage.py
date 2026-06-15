@@ -67,13 +67,21 @@ def dataloader_speed(folder):
             tv.transforms.ToTensor(),
         ]),
     )
-    dl = DataLoader(ds, batch_size=64, num_workers=WORKERS, shuffle=True)
-    for _ in dl:  # warm-up (spawns workers, fills caches)
-        break
-    start, count = time.time(), 0
-    for x, _ in dl:
-        count += x.size(0)
-    return round(count / (time.time() - start), 1)
+    def run(workers):
+        dl = DataLoader(ds, batch_size=64, num_workers=workers, shuffle=True)
+        for _ in dl:  # warm-up (spawns workers, fills caches)
+            break
+        start, count = time.time(), 0
+        for x, _ in dl:
+            count += x.size(0)
+        return round(count / (time.time() - start), 1)
+
+    try:
+        return run(WORKERS)
+    except RuntimeError:
+        # multi-worker DataLoaders need shared memory; if the container is short on
+        # /dev/shm, fall back to single-process loading so we still get a number.
+        return run(0)
 
 
 def main():

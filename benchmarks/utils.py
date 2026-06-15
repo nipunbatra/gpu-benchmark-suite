@@ -21,12 +21,14 @@ def gpu_info():
         import torch
         if torch.cuda.is_available():
             props = torch.cuda.get_device_properties(0)
+            # Cast everything to plain str/int/float — torch.__version__ is a TorchVersion
+            # object that yaml.safe_dump refuses to serialize (silently zeroing the file).
             return {
-                "gpu": torch.cuda.get_device_name(0),
-                "gpu_count": torch.cuda.device_count(),
-                "vram_gb_each": round(props.total_memory / 1e9, 1),
-                "torch": torch.__version__,
-                "cuda": torch.version.cuda,
+                "gpu": str(torch.cuda.get_device_name(0)),
+                "gpu_count": int(torch.cuda.device_count()),
+                "vram_gb_each": round(float(props.total_memory) / 1e9, 1),
+                "torch": str(torch.__version__),
+                "cuda": str(torch.version.cuda),
             }
     except Exception:
         pass

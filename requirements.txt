@@ -1,6 +1,7 @@
-torch --index-url https://download.pytorch.org/whl/cu122
-torchvision --index-url https://download.pytorch.org/whl/cu122
-torchaudio --index-url https://download.pytorch.org/whl/cu122
+# NOTE: torch / torchvision / torchaudio are intentionally NOT listed here.
+# The base image (nvcr.io/nvidia/pytorch) ships optimized, ABI-matched builds of
+# them along with flash-attn. Reinstalling torch from a public wheel index breaks
+# that ABI (flash-attn import errors for the LLM benchmark). Use the container's.
 transformers
 accelerate
 ultralytics
