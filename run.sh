@@ -23,7 +23,7 @@ if ! docker image inspect "$IMAGE" >/dev/null 2>&1; then
   docker build -t "$IMAGE" -f docker/Dockerfile .
 fi
 
-mkdir -p results "$DATA_DIR"
+mkdir -p results "$DATA_DIR" "$HOME/.cache"
 
 COMMON=(
   --rm --gpus all
@@ -34,6 +34,7 @@ COMMON=(
   -v "$(pwd)/benchmarks:/workspace/benchmarks"
   -v "$(pwd)/results:/workspace/results"
   -v "$DATA_DIR:/scratch"
+  -v "$HOME/.cache:/root/.cache"   # persist HF/torch model downloads across runs
   -w /workspace
   "$IMAGE"
 )
