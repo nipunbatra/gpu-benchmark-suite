@@ -4,3 +4,6 @@ torchaudio --index-url https://download.pytorch.org/whl/cu122
 transformers
 accelerate
 ultralytics
+pyyaml
+pillow
+numpy
