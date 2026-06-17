@@ -16,10 +16,15 @@ RESULTS = "results"
 ASSETS = "assets"
 
 # (display label, yaml section, metric key, higher-is-better)
+# Grouped: raw compute, then training, then inference, then storage — so a viewer can see
+# *why* numbers differ (e.g. a big GPU dominates compute/training even if small-batch
+# inference looks flat).
 METRICS = [
-    ("LLM (tok/s)", "LLM", "Steady_Tokens_per_Sec", True),
-    ("Detection (FPS)", "Detection", "Steady_FPS", True),
-    ("Classification (img/s)", "Classification", "Images_per_Sec", True),
+    ("Raw compute (TFLOPS fp16)", "Compute", "Matmul_FP16_TFLOPS", True),
+    ("Training: ResNet50 (img/s)", "Training", "Images_per_Sec", True),
+    ("Inference: ResNet50 (img/s)", "Classification", "Images_per_Sec", True),
+    ("Inference: detection (FPS)", "Detection", "Steady_FPS", True),
+    ("Inference: LLM (tok/s)", "LLM", "Steady_Tokens_per_Sec", True),
     ("Data loading (img/s)", "Storage", "DataLoader_Images_per_Sec", True),
 ]
 

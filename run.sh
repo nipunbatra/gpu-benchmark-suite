@@ -39,7 +39,7 @@ COMMON=(
   "$IMAGE"
 )
 
-for b in llm detection classification storage; do
+for b in compute train classification detection llm storage; do
   echo "==> running $b ..."
   docker run "${COMMON[@]}" python "benchmarks/$b.py" || echo "!! $b failed — continuing"
 done
