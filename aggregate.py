@@ -2,7 +2,7 @@
 
 Reads results/*.yaml (one per server, produced by run.sh) and emits:
   - a console table
-  - assets/benchmarks.svg   (crisp grouped bar chart, normalised speedup; no deps)
+  - assets/benchmarks.svg   (roomy horizontal bar chart, per-metric; no deps)
   - assets/benchmarks.html  (raw-number table, ready to paste into the Quarto page)
 
 No third-party dependencies beyond PyYAML, so it runs anywhere (laptop included).
@@ -66,7 +66,6 @@ def console_table(hosts):
 def html_table(hosts):
     cols = list(hosts.keys())
     out = ['<table>', '  <tr><th>Benchmark</th>' + "".join(f'<th>{html.escape(h)}</th>' for h in cols) + '</tr>']
-    # GPU row
     out.append('  <tr><td><b>GPU</b></td>' + "".join(
         f'<td>{html.escape(str(hosts[h].get("Meta",{}).get("gpu","-")))}</td>' for h in cols) + '</tr>')
     for label, section, key, _ in METRICS:
@@ -79,56 +78,66 @@ def html_table(hosts):
     return "\n".join(out)
 
 
-def svg_chart(hosts, width=820, height=460, pad=70):
-    """Grouped bar chart of speedup relative to the slowest host per metric."""
+def _fmt(v):
+    return f"{v:.0f}" if v >= 100 else f"{v:.1f}"
+
+
+def svg_chart(hosts):
+    """Roomy horizontal bar chart. Bars are normalised per-metric (longest = best in that
+    metric) and labelled with the raw value, so different unit scales stay readable."""
     cols = list(hosts.keys())
-    groups = []
-    for label, section, key, _ in METRICS:
-        vals = [metric_value(hosts[h], section, key) for h in cols]
+    groups = [(label, [metric_value(hosts[h], section, key) for h in cols])
+              for label, section, key, _ in METRICS]
+
+    n = len(cols)
+    LM, RM, TM, BM = 250, 80, 58, 64           # generous left margin for metric labels
+    bar_h, bar_gap, grp_gap = 17, 5, 26
+    grp_h = n * (bar_h + bar_gap)
+    W = 960
+    plot_w = W - LM - RM
+    H = TM + len(groups) * (grp_h + grp_gap) + BM
+
+    s = [f'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 {W} {H}" '
+         f'font-family="-apple-system,Segoe UI,Roboto,sans-serif">']
+    s.append(f'<rect width="{W}" height="{H}" fill="white"/>')
+    s.append(f'<text x="{W/2:.0f}" y="32" text-anchor="middle" font-size="19" font-weight="700" '
+             f'fill="#1f2937">ML benchmark by metric — longest bar = best</text>')
+
+    y = TM
+    for gi, (label, vals) in enumerate(groups):
         nums = [v for v in vals if isinstance(v, (int, float)) and v > 0]
-        base = min(nums) if nums else 1.0
-        speed = [(v / base) if isinstance(v, (int, float)) and v > 0 else 0 for v in vals]
-        groups.append((label, speed))
+        mx = max(nums) if nums else 1.0
+        # zebra band behind the group
+        if gi % 2 == 0:
+            s.append(f'<rect x="0" y="{y-bar_gap:.0f}" width="{W}" height="{grp_h+bar_gap:.0f}" fill="#fafbfc"/>')
+        # metric label (left, vertically centred)
+        s.append(f'<text x="{LM-14}" y="{y + grp_h/2 + 4:.0f}" text-anchor="end" font-size="13" '
+                 f'font-weight="600" fill="#374151">{html.escape(label)}</text>')
+        s.append(f'<line x1="{LM}" y1="{y-bar_gap:.0f}" x2="{LM}" y2="{y+grp_h:.0f}" stroke="#dfe3e8"/>')
+        for i, h in enumerate(cols):
+            v = vals[i]
+            by = y + i * (bar_h + bar_gap)
+            c = COLORS[i % len(COLORS)]
+            if isinstance(v, (int, float)) and v > 0:
+                bw = max(3, v / mx * plot_w)
+                s.append(f'<rect x="{LM}" y="{by:.0f}" width="{bw:.1f}" height="{bar_h}" fill="{c}" rx="2"/>')
+                s.append(f'<text x="{LM+bw+7:.1f}" y="{by+bar_h-4:.0f}" font-size="12" fill="#374151">{_fmt(v)}</text>')
+            else:
+                s.append(f'<text x="{LM+5}" y="{by+bar_h-4:.0f}" font-size="11" fill="#b0b4ba">n/a</text>')
+        y += grp_h + grp_gap
 
-    plot_w, plot_h = width - 2 * pad, height - 2 * pad
-    max_speed = max([s for _, sp in groups for s in sp] + [1.0])
-    gw = plot_w / len(groups)
-    bw = gw / (len(cols) + 1)
-    y0 = height - pad
-
-    def y(v):
-        return y0 - (v / max_speed) * plot_h
-
-    s = [f'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 {width} {height}" font-family="sans-serif">']
-    s.append(f'<rect width="{width}" height="{height}" fill="white"/>')
-    s.append(f'<text x="{width/2}" y="28" text-anchor="middle" font-size="18" font-weight="bold">'
-             f'Relative ML performance (× vs slowest server)</text>')
-    # y gridlines
-    ticks = max(2, int(max_speed))
-    for t in range(ticks + 1):
-        yy = y(t)
-        s.append(f'<line x1="{pad}" y1="{yy:.1f}" x2="{width-pad}" y2="{yy:.1f}" stroke="#eee"/>')
-        s.append(f'<text x="{pad-8}" y="{yy+4:.1f}" text-anchor="end" font-size="11" fill="#666">{t}×</text>')
-    # bars
-    for gi, (label, speed) in enumerate(groups):
-        gx = pad + gi * gw
-        for ci, v in enumerate(speed):
-            x = gx + (ci + 0.5) * bw
-            yy = y(v)
-            s.append(f'<rect x="{x:.1f}" y="{yy:.1f}" width="{bw*0.9:.1f}" height="{y0-yy:.1f}" '
-                     f'fill="{COLORS[ci % len(COLORS)]}"/>')
-            if v > 0:
-                s.append(f'<text x="{x+bw*0.45:.1f}" y="{yy-4:.1f}" text-anchor="middle" '
-                         f'font-size="10" fill="#333">{v:.1f}</text>')
-        s.append(f'<text x="{gx+gw/2:.1f}" y="{y0+18:.1f}" text-anchor="middle" font-size="12">'
-                 f'{html.escape(label)}</text>')
-    # legend
-    lx = pad
-    for ci, h in enumerate(cols):
-        ly = height - 16
-        s.append(f'<rect x="{lx:.1f}" y="{ly-10:.1f}" width="12" height="12" fill="{COLORS[ci % len(COLORS)]}"/>')
-        s.append(f'<text x="{lx+18:.1f}" y="{ly:.1f}" font-size="12">{html.escape(h)}</text>')
-        lx += 30 + len(h) * 8
+    # legend (wraps if needed)
+    lx, ly = LM, H - 30
+    for i, h in enumerate(cols):
+        gpu = str(hosts[h].get("Meta", {}).get("gpu", "")).replace("NVIDIA ", "").replace("-SXM4-80GB", "")
+        lbl = f"{h} · {gpu}" if gpu else h
+        wlen = 34 + int(len(lbl) * 7.0)
+        if lx + wlen > W - 10:
+            lx = LM
+            ly += 20
+        s.append(f'<rect x="{lx:.0f}" y="{ly-11}" width="12" height="12" rx="2" fill="{COLORS[i % len(COLORS)]}"/>')
+        s.append(f'<text x="{lx+17:.0f}" y="{ly:.0f}" font-size="12" fill="#4b5563">{html.escape(lbl)}</text>')
+        lx += wlen
     s.append('</svg>')
     return "\n".join(s)
 
